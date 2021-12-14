@@ -6,7 +6,7 @@ import java.util.ArrayList;
 import java.net.*;
 import java.io.*;
 
-public class HttpClientConnection {
+public class HttpClientConnection implements Runnable {
 
     private Socket socket;
     private BufferedReader br;
@@ -15,5 +15,11 @@ public class HttpClientConnection {
 
     HttpClientConnection(Socket socket) {
         this.socket = socket;
+    }
+
+    @Override
+    public void run() {
+        // TODO Auto-generated method stub
+
     }
 }
