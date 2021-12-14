@@ -11,7 +11,6 @@ public class HttpClientConnection implements Runnable {
     private Socket socket;
     private BufferedReader br;
     private BufferedWriter bw;
-    private String filename;
 
     HttpClientConnection(Socket socket) {
         this.socket = socket;
