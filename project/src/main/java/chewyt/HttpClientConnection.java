@@ -1,6 +1,10 @@
 package chewyt;
 
 import java.net.Socket;
+import java.nio.file.Files;
+
+import javax.imageio.ImageIO;
+import java.awt.image.BufferedImage;
 import java.net.*;
 import java.io.*;
 
@@ -17,19 +21,18 @@ public class HttpClientConnection implements Runnable {
             this.socket = socket;
 
             this.os = socket.getOutputStream();
-
             this.bw = new BufferedWriter(new OutputStreamWriter(os));
             this.br = new BufferedReader(
                     new InputStreamReader(socket.getInputStream()));
 
             this.docRoots = docRoots;
         } catch (IOException e) {
-            closeEverything(socket, br, bw);
+            closeEverything(socket, br, bw, os);
         }
 
     }
 
-    public void closeEverything(Socket socket, BufferedReader br, BufferedWriter bw) {
+    public void closeEverything(Socket socket, BufferedReader br, BufferedWriter bw, OutputStream os) {
 
         try {
             if (br != null) {
@@ -41,20 +44,12 @@ public class HttpClientConnection implements Runnable {
             if (socket != null) {
                 socket.close();
             }
+            if (os != null) {
+                os.close();
+            }
         } catch (IOException e) {
             e.printStackTrace();
         }
-    }
-
-    public boolean resourceExists(String[] docRoots, String resource) {
-
-        for (String path : docRoots) {
-            File html = new File(path + resource);
-            if (html.exists()) {
-                return true;
-            }
-        }
-        return false;
     }
 
     public String htmlConvert(String[] docRoots, String resource) {
@@ -65,7 +60,7 @@ public class HttpClientConnection implements Runnable {
         for (String path : docRoots) {
             File html = new File(path + resource);
             if (html.exists()) {
-                System.out.println("Copying resource...");
+                // System.out.println("Copying resource...");
                 try (FileReader fr = new FileReader(html)) {
                     BufferedReader reader = new BufferedReader(fr);
                     while ((line = reader.readLine()) != null) {
@@ -73,10 +68,10 @@ public class HttpClientConnection implements Runnable {
                     }
                 } catch (FileNotFoundException e) {
                     System.out.println("A File not found error occurred.");
-                    closeEverything(socket, br, bw);
+                    closeEverything(socket, br, bw, os);
                 } catch (IOException i) {
                     System.out.println("An IO error occurred.");
-                    closeEverything(socket, br, bw);
+                    closeEverything(socket, br, bw, os);
                 }
                 return htmlScript;
             }
@@ -99,7 +94,7 @@ public class HttpClientConnection implements Runnable {
             resource = request.split(" ")[1];
 
         } catch (IOException e) {
-            closeEverything(socket, br, bw);
+            closeEverything(socket, br, bw, os);
         }
 
         // ACTIONS to be performed
@@ -113,16 +108,14 @@ public class HttpClientConnection implements Runnable {
                 writer.writeString("\r\n");
                 writer.writeString("<" + requestMethod + "> not supported\r\n");
                 writer.close();
-
-                System.exit(1);
+                return;
+                // System.exit(1);
             } catch (IOException e) {
-                closeEverything(socket, br, bw);
+                closeEverything(socket, br, bw, os);
             } catch (Exception e) {
                 e.printStackTrace();
-                closeEverything(socket, br, bw);
+                closeEverything(socket, br, bw, os);
             }
-        } else {
-            System.out.println("GET method is correct!");
         }
         // ACTION 2
 
@@ -130,7 +123,18 @@ public class HttpClientConnection implements Runnable {
             resource = "/index.html";
         }
 
-        if (!resourceExists(docRoots, resource)) {
+        boolean resourceExists = false;
+        File foundResource = null;
+        for (String path : docRoots) {
+            File file = new File(path + resource);
+            if (file.exists() && file.isFile()) {
+                foundResource = file;
+                resourceExists = true;
+                break;
+            }
+        }
+
+        if (!resourceExists) {
 
             try {
                 HttpWriter writer = new HttpWriter(os);
@@ -138,53 +142,60 @@ public class HttpClientConnection implements Runnable {
                 writer.writeString("\r\n");
                 writer.writeString("<" + resource + "> not found\r\n");
                 writer.close();
-                System.exit(1);
+                // System.exit(1);
+                return;
             } catch (IOException e) {
-                closeEverything(socket, br, bw);
+                closeEverything(socket, br, bw, os);
             } catch (Exception e) {
-                closeEverything(socket, br, bw);
+                closeEverything(socket, br, bw, os);
+                e.printStackTrace();
+            }
+
+        }
+
+        // ACTION 3
+
+        // ACTION 4 added before ACTION 3 for checking condition
+
+        // System.out.println("resource path: " + foundResource);
+        if (!resource.endsWith(".png")) {
+            // DO ACTION 3
+            String htmlStream = htmlConvert(docRoots, resource);
+
+            try {
+                HttpWriter writer = new HttpWriter(os);
+                writer.writeString("HTTP/1.1 200 OK\r\n");
+                writer.writeString("\r\n");
+                writer.writeString(htmlStream);
+                writer.close();
+            } catch (IOException e) {
+                closeEverything(socket, br, bw, os);
+            } catch (Exception e) {
+                closeEverything(socket, br, bw, os);
                 e.printStackTrace();
             }
 
         } else {
-            System.out.println("Resource exists!");
+            // Resource is a PNG image
+
+            try {
+
+                String mimetype = Files.probeContentType(foundResource.toPath());
+                // System.out.println("Mimetype: " + mimetype);
+                HttpWriter writer = new HttpWriter(os);
+                writer.writeString("HTTP/1.1 200 OK\r\n" +
+                        "Content-Type: " + mimetype + "\r\n");
+                writer.writeBytes(Files.readAllBytes(foundResource.toPath()));
+                writer.close();
+            } catch (IOException e1) {
+                closeEverything(socket, br, bw, os);
+                e1.printStackTrace();
+            } catch (Exception e) {
+                closeEverything(socket, br, bw, os);
+                e.printStackTrace();
+            }
         }
-
-        // ACTION 3
-        String htmlStream = htmlConvert(docRoots, resource);
-
-        try {
-            HttpWriter writer = new HttpWriter(os);
-            writer.writeString("HTTP/1.1 200 OK\r\n");
-            writer.writeString("\r\n");
-            writer.writeString(htmlStream);
-            writer.close();
-        } catch (IOException e) {
-            closeEverything(socket, br, bw);
-        } catch (Exception e) {
-            closeEverything(socket, br, bw);
-            e.printStackTrace();
-        }
-
-        // System.exit(0);
-        /*
-         * File directory =
-         * if (!resource.equals("GET")) {
-         * try {
-         * bw.write("HTTP/1.1 404 Not Found\r\n\r\n<Resource name> not found\r\n");
-         * bw.newLine();
-         * bw.flush();
-         * System.out.
-         * println("HTTP/1.1 404 Not Found\r\n\r\n<Resource name> not found\r\n");
-         * System.exit(1);
-         * } catch (IOException e) {
-         * closeEverything(socket, br, bw);
-         * }
-         * }
-         */
-        // while (socket.isConnected()) {
-
-        // }
-
+        closeEverything(socket, br, bw, os);
+        return;
     }
 }

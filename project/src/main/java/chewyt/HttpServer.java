@@ -21,7 +21,7 @@ public class HttpServer {
     public void startServer() {
         try {
 
-            ExecutorService threadPool = Executors.newFixedThreadPool(5); // Third client join in--> Can Add to
+            ExecutorService threadPool = Executors.newFixedThreadPool(3); // Third client join in--> Can Add to
                                                                           // clienthandler but thread
 
             while (!server.isClosed()) {
@@ -29,24 +29,27 @@ public class HttpServer {
                 // Test conditions before listening for client connection
                 for (int i = 0; i < docRoots.length; i++) {
                     File directory = new File(docRoots[i]);
-                    System.out.println(
-                            "Checking Path " + (i + 1) + "/" + docRoots.length + " [" + docRoots[i] + "] ....");
+                    // System.out.println("Checking Path " + (i + 1) + "/" + docRoots.length + " ["
+                    // + docRoots[i] + "] ....");
                     if (!directory.exists()) {
                         System.out.println("Path [" + docRoots[i] + "] does not exists");
-                        System.out.println("Program aborted at Test check " + (i + 1) + "/" + docRoots.length);
+                        // System.out.println("Program aborted at Test check " + (i + 1) + "/" +
+                        // docRoots.length);
                         System.exit(1);
                     }
                     if (!directory.isDirectory()) {
                         System.out.println("Path [" + docRoots[i] + "] is not a directory");
-                        System.out.println("Program aborted at Test check " + (i + 1) + "/" + docRoots.length);
+                        // System.out.println("Program aborted at Test check " + (i + 1) + "/" +
+                        // docRoots.length);
                         System.exit(1);
                     }
                     if (!directory.canRead()) {
                         System.out.println("Path [" + docRoots[i] + "] is not readable by server");
-                        System.out.println("Program aborted at Test check " + (i + 1) + "/" + docRoots.length);
+                        // System.out.println("Program aborted at Test check " + (i + 1) + "/" +
+                        // docRoots.length);
                         System.exit(1);
                     }
-                    System.out.println("Path [" + docRoots[i] + "] passed test conditions");
+                    // System.out.println("Path [" + docRoots[i] + "] passed test conditions");
                 }
 
                 System.out.println("[SERVER] Server ready. Listening for client... Port " + port);
@@ -54,10 +57,8 @@ public class HttpServer {
                 System.out.println("A new client has connected.");
 
                 HttpClientConnection clienthandler = new HttpClientConnection(socket, docRoots);
-
-                // Code for auto running and scheduling of threads from Threadpool by Executor
-                // Service
                 threadPool.submit(clienthandler);
+                // System.out.println("Active count of threads: " + Thread.activeCount());
 
             }
         } catch (IOException e) {
