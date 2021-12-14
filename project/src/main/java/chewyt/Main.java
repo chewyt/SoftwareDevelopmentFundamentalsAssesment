@@ -12,11 +12,11 @@ public class Main {
     public static void main(String[] args) throws IOException {
         if (args.length == 0) {
             port = 3000;
-            docRoot = "./";
+            docRoot = "../static";
         } else if (args.length == 2 && args[0].equals("--port")) {
             port = Integer.parseInt(args[1]);
             // System.out.println("TEST ON SYS ARGS\nPort: " + args[0] + " " + args[1]);
-            docRoot = "./";
+            docRoot = "../static";
 
         } else if (args.length == 4 && args[0].equals("--port") && args[2].equals("--docRoot")) {
             port = Integer.parseInt(args[1]);
@@ -37,8 +37,8 @@ public class Main {
         // System.out.println(string);
 
         // START PROGRAM HERE
-        ServerSocket serverSocket = new ServerSocket(port);
-        HttpServer server = new HttpServer(serverSocket, docRoots);
+
+        HttpServer server = new HttpServer(docRoots, port);
         server.startServer();
     }
 }

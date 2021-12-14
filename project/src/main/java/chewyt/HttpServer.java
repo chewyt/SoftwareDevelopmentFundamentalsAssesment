@@ -7,19 +7,21 @@ import java.util.concurrent.Executors;
 
 public class HttpServer {
 
-    private static final int port = 12345;
+    private int port;
     private ServerSocket server;
     private String[] docRoots;
 
-    public HttpServer(ServerSocket server, String[] docRoots) {
-        this.server = server;
+    public HttpServer(String[] docRoots, int port) throws IOException {
+
         this.docRoots = docRoots;
+        this.port = port;
+        this.server = new ServerSocket(port);
     }
 
     public void startServer() {
         try {
 
-            ExecutorService threadPool = Executors.newFixedThreadPool(3); // Third client join in--> Can Add to
+            ExecutorService threadPool = Executors.newFixedThreadPool(5); // Third client join in--> Can Add to
                                                                           // clienthandler but thread
 
             while (!server.isClosed()) {
@@ -47,11 +49,11 @@ public class HttpServer {
                     System.out.println("Path [" + docRoots[i] + "] passed test conditions");
                 }
 
-                System.out.println("[SERVER] Server ready. Listening for client...");
+                System.out.println("[SERVER] Server ready. Listening for client... Port " + port);
                 Socket socket = server.accept();
                 System.out.println("A new client has connected.");
 
-                HttpClientConnection clienthandler = new HttpClientConnection(socket);
+                HttpClientConnection clienthandler = new HttpClientConnection(socket, docRoots);
 
                 // Code for auto running and scheduling of threads from Threadpool by Executor
                 // Service
